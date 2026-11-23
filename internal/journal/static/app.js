@@ -70,7 +70,8 @@ function setupForm(source='contemporaneous',entry=null){
   else addPrincipal();
   dependencies();
 }
-function navigate(view,entry=null){
+function navigate(view,entry=null,keepToast=false){
+  if(!keepToast){clearTimeout(toastTimer);$('#toast').hidden=true;}
   if(view==='import'){setupForm('paper_import');currentView='entry';}else if(view==='entry'){setupForm(entry?.data.source||'contemporaneous',entry);currentView='entry';}else currentView=view;
   document.querySelectorAll('.view').forEach(v=>v.hidden=v.id!==`view-${currentView}`);
   document.querySelectorAll('.nav-item').forEach(n=>{const on=n.dataset.view===view;n.classList.toggle('active',on);on?n.setAttribute('aria-current','page'):n.removeAttribute('aria-current');});

@@ -49,11 +49,18 @@ test('create entry, attach file, correct it', async ({ page }) => {
   await dialog.getByRole('button', { name: 'Attach to record' }).click();
   await expect(page.locator('#detail-content')).toContainText('Attachment');
 
+  await page.emulateMedia({ media: 'print' });
+  await expect(page.locator('#application')).toBeHidden();
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Close' })).toBeHidden();
+  await page.emulateMedia({ media: 'screen' });
   await dialog.getByRole('button', { name: 'Add correction' }).click();
   await page.getByLabel('Full address').fill('2 Main St, Albany NY');
   await page.getByLabel('Reason for correction').fill('Address typo');
   await page.getByRole('button', { name: 'Save correction' }).click();
   await expect(page.locator('#toast')).toContainText('Correction saved');
+  await page.locator('nav [data-view="archive"]').click();
+  await expect(page.locator('#toast')).toBeHidden();
 
   await page.locator('nav [data-view="archive"]').click();
   await expect(page.locator('nav [data-view="archive"]')).toHaveAttribute('aria-current', 'page');
