@@ -66,6 +66,14 @@ spec:
               value: /data/journal.sqlite3
             - name: NOTARY_PASSWORD_FILE
               value: /var/run/notary-auth/password
+            {{- with .Values.notary.name }}
+            - name: NOTARY_NAME
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.notary.commissionId }}
+            - name: NOTARY_COMMISSION_ID
+              value: {{ . | quote }}
+            {{- end }}
             - name: GCS_BUCKET
               value: {{ .Values.gcs.bucket | quote }}
             {{- if .Values.gcs.credentialsSecret }}

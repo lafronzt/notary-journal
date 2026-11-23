@@ -8,7 +8,7 @@ module.exports = defineConfig({
   webServer: {
     command: `../bin/notary-journal --db ${dir}/e2e.sqlite3 --listen 127.0.0.1:8099 serve`,
     url: 'http://127.0.0.1:8099/healthz',
-    env: { NOTARY_PASSWORD: 'e2e-test-password-not-secret' },
+    env: { NOTARY_PASSWORD: 'e2e-test-password-not-secret', NOTARY_NAME: 'Alex Rivera', NOTARY_COMMISSION_ID: '01XX0000000' },
     reuseExistingServer: false,
   },
 });

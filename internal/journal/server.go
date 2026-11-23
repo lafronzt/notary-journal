@@ -37,6 +37,20 @@ type Server struct {
 	mu       sync.Mutex
 	sessions map[string]time.Time
 	failures []time.Time
+	defaults Defaults
+}
+
+// Defaults pre-fills fields for a single-notary deployment. They are
+// conveniences only; every entry stores the values actually submitted.
+type Defaults struct {
+	NotaryName   string `json:"notary_name"`
+	CommissionID string `json:"commission_id"`
+}
+
+// SetDefaults configures the notary details suggested on new entries.
+func (s *Server) SetDefaults(d Defaults) {
+	d.NotaryName, d.CommissionID = strings.TrimSpace(d.NotaryName), strings.TrimSpace(d.CommissionID)
+	s.defaults = d
 }
 
 func NewServer(store *Store, archive *Archive, password, publicURL, listen string) (*Server, error) {
@@ -290,6 +304,8 @@ func (s *Server) get(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case path == "/api/entries":
 		result, err = s.store.Entries()
+	case path == "/api/config":
+		result = s.defaults
 	case path == "/api/status":
 		result, err = s.archive.Status()
 	case strings.HasPrefix(path, "/api/history/"):

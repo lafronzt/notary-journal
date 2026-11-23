@@ -534,3 +534,15 @@ func TestHTTPSHostValidationProbesAndRateLimit(t *testing.T) {
 		t.Fatal("network listener without public origin accepted")
 	}
 }
+
+func TestNotaryDefaultsEndpoint(t *testing.T) {
+	app, _ := testServer(t, "")
+	if w := request(t, app, "GET", "/api/config", nil, nil, ""); w.Code != 401 {
+		t.Fatal("config exposed without a session")
+	}
+	app.SetDefaults(Defaults{NotaryName: "  Alex Rivera ", CommissionID: "01XX0000000"})
+	w := request(t, app, "GET", "/api/config", nil, login(t, app), "")
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `"notary_name":"Alex Rivera"`) || !strings.Contains(w.Body.String(), `"commission_id":"01XX0000000"`) {
+		t.Fatalf("unexpected config: %d %s", w.Code, w.Body.String())
+	}
+}

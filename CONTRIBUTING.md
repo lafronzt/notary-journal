@@ -11,6 +11,7 @@ make check      # go vet + JavaScript syntax
 make test       # go test -race ./...
 make helm-check # chart lint/template
 make e2e        # browser tests (Playwright, downloads Chromium)
+make screenshots # regenerate docs/images (fictional demo data)
 ```
 
 ## Guidelines

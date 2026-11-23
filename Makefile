@@ -1,4 +1,4 @@
-.PHONY: build run e2e test check helm-check image
+.PHONY: build run e2e screenshots test check helm-check image
 run: build
 	./bin/notary-journal serve
 build:
@@ -6,6 +6,9 @@ build:
 
 e2e: build
 	cd e2e && npm ci && npx playwright install chromium && npx playwright test
+
+screenshots: build
+	cd e2e && npm ci && npx playwright install chromium && SCREENSHOTS=1 npx playwright test screenshots
 
 test:
 	go test -race ./...

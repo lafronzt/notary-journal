@@ -16,6 +16,11 @@ auth:
   existingSecret: ""
   passwordKey: password
 
+# Optional single-notary defaults pre-filled (and still editable) on new entries.
+notary:
+  name: ""
+  commissionId: ""
+
 serviceAccount:
   create: true
   name: ""

@@ -36,6 +36,8 @@ func run(args []string) error {
 	dbPath := flags.String("db", env("NOTARY_DB", "data/journal.sqlite3"), "SQLite database path")
 	listen := flags.String("listen", env("LISTEN_ADDR", "127.0.0.1:8087"), "HTTP listen address")
 	publicURL := flags.String("public-url", os.Getenv("PUBLIC_URL"), "external browser origin; required beyond loopback")
+	notaryName := flags.String("notary-name", os.Getenv("NOTARY_NAME"), "default notary name pre-filled on new entries")
+	commissionID := flags.String("commission-id", os.Getenv("NOTARY_COMMISSION_ID"), "default commission/registration ID pre-filled on new entries")
 	flags.Usage = func() {
 		fmt.Fprintln(flags.Output(), "Usage: notary-journal [options] serve|verify|sync|export FILE|restore FILE|restore-gcs JOURNAL_UUID")
 		flags.PrintDefaults()
@@ -161,6 +163,7 @@ func run(args []string) error {
 		if err != nil {
 			return err
 		}
+		app.SetDefaults(journal.Defaults{NotaryName: *notaryName, CommissionID: *commissionID})
 		if _, err = store.Verify(); err != nil {
 			return fmt.Errorf("journal integrity check failed; refusing to serve: %w", err)
 		}

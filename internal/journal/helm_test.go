@@ -31,6 +31,13 @@ func TestHelmDeploymentConfigurations(t *testing.T) {
 			t.Errorf("default chart missing %q", required)
 		}
 	}
+	if strings.Contains(out, "NOTARY_NAME") {
+		t.Error("notary defaults rendered without values")
+	}
+	withNotary, err := run(append(append([]string{}, base...), "--set", "notary.name=Alex Rivera", "--set", "notary.commissionId=01XX0000000")...)
+	if err != nil || !strings.Contains(withNotary, "name: NOTARY_NAME") || !strings.Contains(withNotary, "01XX0000000") {
+		t.Fatalf("notary defaults not rendered: %v\n%s", err, withNotary)
+	}
 	args := append(append([]string{}, base...), "--set", "ingress.enabled=true", "--set", "ingress.host=journal.example.com", "--set", "publicURL=https://journal.example.com", "--set", "persistence.existingClaim=existing-journal", "--set", "gcs.credentialsSecret=google-credentials", "--set", "gcs.bucket=example-notary", "--set", "networkPolicy.enabled=true")
 	out, err = run(args...)
 	if err != nil {

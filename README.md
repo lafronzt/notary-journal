@@ -2,6 +2,23 @@
 
 A Go application for a single New York notary: SQLite for fast access, Google Cloud Storage for long-term archival, and an embedded browser interface. Deploy on a workstation or Kubernetes using the included Helm chart. No Python runtime, Node build, external SQL server, or CGO is required.
 
+## Screenshots
+
+Fictional demo data, regenerated with `make screenshots`.
+
+| | |
+|---|---|
+| ![Journal list](docs/images/journal.png) | ![Record detail](docs/images/record-detail.png) |
+| ![New entry form](docs/images/new-entry.png) | ![Archive and integrity](docs/images/archive.png) |
+
+On a phone:
+
+<p>
+<img src="docs/images/mobile-journal.png" width="240" alt="Journal on a phone">
+<img src="docs/images/mobile-record-detail.png" width="240" alt="Record detail on a phone">
+<img src="docs/images/mobile-archive.png" width="240" alt="Archive on a phone">
+</p>
+
 ## Run locally
 
 Requires Go 1.27 or later.
@@ -33,6 +50,8 @@ Options appear **before** the command:
 | `PUBLIC_URL` / `--public-url` | Browser origin; derived for local access, required for a network listener |
 | `NOTARY_PASSWORD` | Password from a private environment |
 | `NOTARY_PASSWORD_FILE` | Protected file containing the password; preferred in Kubernetes |
+| `NOTARY_NAME` / `--notary-name` | Optional. Notary name pre-filled (still editable) on new entries; stored with each entry as submitted |
+| `NOTARY_COMMISSION_ID` / `--commission-id` | Optional. Commission/registration ID pre-filled on new entries |
 | `GCS_BUCKET` | Bucket name; unset means SQLite-only operation |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Optional ADC file; otherwise Google's standard ADC discovery applies |
 
@@ -40,6 +59,7 @@ Remote public URLs must use HTTPS. The server itself serves HTTP behind your TLS
 
 ## Journal workflow
 
+- **Journal list:** newest first by default, with a toggle for oldest first. Search matches names, addresses, act types, book references and displayed dates.
 - **New entry:** contemporaneous act details, all principals and their addresses, service type/count, identity basis, applicable witnesses and verification procedures. Use separate entries for different service types.
 - **Digitize paper:** manually transcribe a record and its book/page reference. If the approximate time is absent, use the date-only option. Save, open the record, then attach the original scan. A separate timestamp records digitization. Keep paper originals and explicitly describe missing historical facts; never invent them. OCR is outside this release.
 - **History and corrections:** preserve the original, add a complete correction with a reason, inspect history, download attachments, and print the selected record.
@@ -91,6 +111,9 @@ image:
   tag: "0.1.0"
 auth:
   existingSecret: journal-auth
+notary:            # optional: pre-fill new entries (single-notary deployment)
+  name: Your Name
+  commissionId: "01XX0000000"
 publicURL: https://journal.example.com
 ingress:
   enabled: true

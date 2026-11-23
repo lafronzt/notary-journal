@@ -1,7 +1,7 @@
 'use strict';
 const $ = s => document.querySelector(s);
 const form = $('#entry-form');
-let entries = [], selected = null, currentView = 'journal', toastTimer;
+let entries = [], defaults = {notary_name:'',commission_id:''}, selected = null, currentView = 'journal', toastTimer;
 const text = (tag, value, cls) => { const el=document.createElement(tag); el.textContent=value; if(cls)el.className=cls; return el; };
 const actDate = value => new Date(/^\d{4}-\d{2}-\d{2}$/.test(value)?value+'T12:00:00':value);
 const localDate = value => { if(/^\d{4}-\d{2}-\d{2}$/.test(value))return actDate(value).toLocaleDateString()+' · time not recorded'; const d=new Date(value); return Number.isNaN(d.getTime()) ? value : d.toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'}); };
@@ -14,7 +14,7 @@ async function api(path, data) {
 }
 function lock(){entries=[];selected=null;$('#entries').replaceChildren();$('#detail-content').replaceChildren();$('#detail').close();form.reset();$('#application').hidden=true;$('#unlock').hidden=false;$('#login-form').reset();}
 async function start(){ $('#unlock').hidden=true;$('#application').hidden=false;await refresh(); }
-async function refresh(){const result=await Promise.all([api('/api/entries'),api('/api/status')]);entries=result[0];renderEntries();renderStatus(result[1]);}
+async function refresh(){const result=await Promise.all([api('/api/entries'),api('/api/status'),api('/api/config')]);entries=result[0];defaults=result[2];renderEntries();renderStatus(result[1]);}
 function renderStatus(s){
   $('#entry-count').textContent=entries.length;$('#pending-count').textContent=s.pending;$('#archive-pending').textContent=s.pending;
   $('#cloud-pill').textContent=!s.gcs_configured?'GCS not configured':s.archive_error?'Archive needs attention':s.pending?'GCS · uploads pending':s.last_archive?'GCS · up to date':'GCS · no records yet';
@@ -24,7 +24,9 @@ function renderStatus(s){
 }
 function renderEntries(){
   const q=$('#search').value.toLocaleLowerCase().trim(), source=$('#source-filter').value;
-  const filtered=entries.filter(e=>(source==='all'||e.data.source===source)&&JSON.stringify(e.data).toLocaleLowerCase().includes(q));
+  const sign=$('#sort-order').value==='oldest'?1:-1;
+  const filtered=entries.filter(e=>(source==='all'||e.data.source===source)&&(JSON.stringify(e.data)+' '+localDate(e.data.occurred_at)).toLocaleLowerCase().includes(q))
+    .sort((a,b)=>sign*(actDate(a.data.occurred_at)-actDate(b.data.occurred_at)||a.created_at.localeCompare(b.created_at)));
   $('#entries').replaceChildren();$('#empty-state').hidden=filtered.length>0;
   if(!filtered.length){$('#empty-state h2').textContent=entries.length?'No matching records.':'A new chapter for your records.';$('#empty-state p').textContent=entries.length?'Try another search or entry filter.':'Record a notarial act or bring an existing paper journal into Ledger.';}
   for(const e of filtered){const row=document.createElement('tr');
@@ -67,7 +69,7 @@ function setupForm(source='contemporaneous',entry=null){
   $('#form-description').textContent=entry?'The original stays unchanged. This adds a dated correction and the reason.':source==='paper_import'?'Transcribe a paper record, then attach its scan to the saved entry.':'Record the act as it happens. Required fields follow 19 NYCRR §182.9.';
   $('#save-button').textContent=entry?'Save correction':'Save journal entry';
   if(entry){for(const [key,value]of Object.entries(entry.data)){const input=form.elements[key];if(!input||key==='occurred_at')continue;if(input.type==='checkbox')input.checked=!!value;else if(typeof value!=='object')input.value=value;}if(entry.data.time_not_recorded){form.elements.occurred_at.type='date';form.elements.occurred_at.value=entry.data.occurred_at;}else form.elements.occurred_at.value=dateInput(entry.data.occurred_at);for(const p of entry.data.principals)addPrincipal(p);for(const w of entry.data.witnesses||[])addWitness(w);}
-  else addPrincipal();
+  else{addPrincipal();form.elements.notary_name.value=defaults.notary_name||'';form.elements.commission_id.value=defaults.commission_id||'';}
   dependencies();
 }
 function navigate(view,entry=null,keepToast=false){
@@ -98,7 +100,7 @@ async function showDetail(entry){
   $('#attachment-form').reset();if(!$('#detail').open)$('#detail').showModal();
 }
 document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.view)));
-$('#search').addEventListener('input',renderEntries);$('#source-filter').addEventListener('change',renderEntries);
+$('#search').addEventListener('input',renderEntries);$('#sort-order').addEventListener('change',renderEntries);$('#source-filter').addEventListener('change',renderEntries);
 $('#add-principal').addEventListener('click',()=>addPrincipal());$('#add-witness').addEventListener('click',()=>addWitness());
 form.elements.time_not_recorded.addEventListener('change',dependencies);form.elements.mode.addEventListener('change',dependencies);form.elements.identity_method.addEventListener('change',dependencies);
 $('#timezone-label').textContent=`(${Intl.DateTimeFormat().resolvedOptions().timeZone})`;

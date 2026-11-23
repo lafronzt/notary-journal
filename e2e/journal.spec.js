@@ -26,8 +26,8 @@ test('create entry, attach file, correct it', async ({ page }) => {
   await page.locator('nav [data-view="entry"]').click();
   await page.getByLabel(/Date & approximate time/).fill('2026-11-23T10:30');
   await page.getByLabel('Type of notarial service').fill('Acknowledgment');
-  await page.getByLabel('Notary name').fill('Test Notary');
-  await page.getByLabel('Commission / registration ID').fill('01TE0000000');
+  await expect(page.getByLabel('Notary name')).toHaveValue('Alex Rivera');
+  await expect(page.getByLabel('Commission / registration ID')).toHaveValue('01XX0000000');
   await page.getByLabel('Full name').fill('<b>Jane Doe</b>');
   await page.getByLabel('Full address').fill('1 Main St, Albany NY');
   await page.getByLabel('Credential type').fill('NY driver license');
@@ -85,4 +85,31 @@ test('phone layout has no horizontal scroll', async ({ page }) => {
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow, view).toBeLessThanOrEqual(0);
   }
+  await page.locator('[data-view="journal"]').first().click();
+  expect((await page.locator('#search').boundingBox()).width).toBeGreaterThan(200);
+});
+
+test('sorts newest first by default, toggles, and searches', async ({ page }) => {
+  await unlock(page);
+  const post = async (act, when, name) => { const r = await page.request.post('/api/entries', {
+    headers: { Origin: 'http://127.0.0.1:8099' },
+    data: { source: 'contemporaneous', contemporaneous_attestation: true, occurred_at: when, mode: 'in_person', act_type: act,
+      service_count: 1, notary_name: 'Alex Rivera', commission_id: '01XX0000000', identity_method: 'personal_knowledge',
+      verification: 'Known to notary.', witnesses: [], principals: [{ name, address: '1 Test St' }] },
+  }); expect(r.ok(), await r.text()).toBeTruthy(); };
+  await post('Jurat', '2020-01-05T15:00:00Z', 'Older Person');
+  await post('Jurat', '2026-11-22T15:00:00Z', 'Newer Person');
+  await page.reload();
+  await page.waitForSelector('#entries tr');
+  const names = () => page.locator('#entries tr td:nth-child(2) strong').allTextContents();
+  const newerFirst = async () => { const n = await names(); return n.indexOf('Newer Person') < n.indexOf('Older Person'); };
+  await expect(page.locator('#sort-order')).toHaveValue('newest');
+  expect(await newerFirst()).toBe(true);
+  await page.locator('#sort-order').selectOption('oldest');
+  expect(await newerFirst()).toBe(false);
+  await page.locator('#search').fill('older person');
+  await expect(page.locator('#entries tr')).toHaveCount(1);
+  await expect(page.locator('#entries tr')).toContainText('Older Person');
+  await page.locator('#search').fill('zzz-no-match');
+  await expect(page.locator('#empty-state')).toBeVisible();
 });
