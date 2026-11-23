@@ -42,6 +42,7 @@ test('create entry, attach file, correct it', async ({ page }) => {
   await row.getByRole('button', { name: 'Open' }).click();
   const dialog = page.locator('#detail');
   await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText('Identification credential');
   await dialog.locator('input[type=file]').setInputFiles({
     name: 'scan.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 test'),
   });
