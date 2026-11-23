@@ -1,0 +1,85 @@
+image:
+  repository: notary-journal
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# SQLite has exactly one writer. This chart intentionally has no replicaCount.
+# Default is access through kubectl port-forward only. For an HTTPS ingress,
+# set publicURL to its exact external origin, e.g. https://notary.example.com.
+publicURL: "http://127.0.0.1:8087"
+
+# Create this Secret outside Helm; never put a plaintext password in values.
+auth:
+  existingSecret: ""
+  passwordKey: password
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+  # Set true for federated providers which require an API token, and configure
+  # the credential file's token audience through your provider's projection.
+  automountServiceAccountToken: false
+
+gcs:
+  bucket: ""
+  # Prefer Workload Identity / ADC. For a pre-existing credential Secret,
+  # mount its JSON as GOOGLE_APPLICATION_CREDENTIALS. Federated ADC configs
+  # can also be mounted here; no key material belongs in Helm values.
+  credentialsSecret: ""
+  credentialsKey: credentials.json
+
+persistence:
+  size: 10Gi
+  # Empty uses the cluster default StorageClass. Use a local/block filesystem
+  # with proper SQLite POSIX locks; do not use object FUSE or NFS.
+  storageClass: ""
+  accessModes: [ReadWriteOnce]
+  existingClaim: ""
+
+service:
+  type: ClusterIP
+  port: 8087
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  host: ""
+  tls: []
+  # Example for ingress-nginx attachments:
+  # annotations:
+  #   nginx.ingress.kubernetes.io/proxy-body-size: "90m"
+  #   nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+  # tls:
+  #   - secretName: notary-tls
+  #     hosts: [notary.example.com]
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: "2"
+    memory: 2Gi
+nodeSelector: {}
+tolerations: []
+affinity: {}
+podAnnotations: {}
+
+# Optional firewall. Must allow egress to ADC/STS endpoints and GCS. Defaults
+# allow HTTPS egress plus DNS; private GKE metadata may require additional
+# provider-specific metadata egress rules below.
+networkPolicy:
+  enabled: false
+  ingress: []
+  extraEgress: []
+# Example GKE Workload Identity on the Standard dataplane (verify your setup):
+# extraEgress:
+#   - to:
+#       - ipBlock: { cidr: 169.254.169.252/32 }
+#     ports:
+#       - { protocol: TCP, port: 988 }

@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "notary.fullname" . }}
+  labels:
+    {{- include "notary.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: http
+  selector:
+    {{- include "notary.selectorLabels" . | nindent 4 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "notary.fullname" . }}-headless
+  labels:
+    {{- include "notary.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  ports:
+    - name: http
+      port: 8087
+      targetPort: http
+  selector:
+    {{- include "notary.selectorLabels" . | nindent 4 }}

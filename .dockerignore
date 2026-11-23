@@ -1,0 +1,12 @@
+.git
+.venv
+notary_journal
+tests
+data
+bin
+coverage*
+*.sqlite3*
+*.json
+*.tfstate*
+*.tfvars
+.env

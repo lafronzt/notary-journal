@@ -1,0 +1,12 @@
+Ledger is deployed with one SQLite writer. PVCs created by this chart are retained on uninstall.
+
+{{ if .Values.ingress.enabled }}
+Open {{ .Values.publicURL }} after DNS and HTTPS are ready.
+{{ else }}
+kubectl --namespace {{ .Release.Namespace }} port-forward service/{{ include "notary.fullname" . }} 8087:{{ .Values.service.port }}
+Open http://127.0.0.1:8087 (this must match publicURL).
+{{ end }}
+
+Unlock with the password in Secret {{ .Values.auth.existingSecret }}.
+GCS archiving {{ if .Values.gcs.bucket }}is configured for {{ .Values.gcs.bucket }}; confirm uploads in Archive & integrity.{{ else }}is NOT configured; records are currently on the PVC only.{{ end }}
+Never scale this StatefulSet above one replica or run a second writable restore.

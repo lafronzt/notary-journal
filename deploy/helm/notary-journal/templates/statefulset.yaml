@@ -1,0 +1,163 @@
+{{- if hasKey .Values "replicaCount" }}
+{{- fail "replicaCount is unsupported: this SQLite journal requires exactly one active writer" }}
+{{- end }}
+{{- if .Values.ingress.enabled }}
+{{- if not (hasPrefix "https://" .Values.publicURL) }}
+{{- fail "An ingress requires an HTTPS publicURL" }}
+{{- end }}
+{{- $host := required "ingress.host is required" .Values.ingress.host }}
+{{- if ne .Values.publicURL (printf "https://%s" $host) }}
+{{- fail "publicURL must exactly match https://<ingress.host>" }}
+{{- end }}
+{{- end }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "notary.fullname" . }}
+  labels:
+    {{- include "notary.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "notary.fullname" . }}-headless
+  replicas: 1
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  selector:
+    matchLabels:
+      {{- include "notary.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "notary.selectorLabels" . | nindent 8 }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "notary.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
+      terminationGracePeriodSeconds: 40
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: journal
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: [serve]
+          ports:
+            - name: http
+              containerPort: 8087
+          env:
+            - name: LISTEN_ADDR
+              value: "0.0.0.0:8087"
+            - name: PUBLIC_URL
+              value: {{ required "publicURL is required" .Values.publicURL | quote }}
+            - name: NOTARY_DB
+              value: /data/journal.sqlite3
+            - name: NOTARY_PASSWORD_FILE
+              value: /var/run/notary-auth/password
+            - name: GCS_BUCKET
+              value: {{ .Values.gcs.bucket | quote }}
+            {{- if .Values.gcs.credentialsSecret }}
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: /var/run/gcs/credentials.json
+            {{- end }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          startupProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            failureThreshold: 60
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 3
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: auth
+              mountPath: /var/run/notary-auth
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+            {{- if .Values.gcs.credentialsSecret }}
+            - name: gcs-credentials
+              mountPath: /var/run/gcs
+              readOnly: true
+            {{- end }}
+      volumes:
+        - name: auth
+          secret:
+            secretName: {{ required "auth.existingSecret must name a pre-created journal-password Secret" .Values.auth.existingSecret }}
+            defaultMode: 0440
+            items:
+              - key: {{ .Values.auth.passwordKey }}
+                path: password
+        - name: tmp
+          emptyDir:
+            sizeLimit: 256Mi
+        {{- if .Values.persistence.existingClaim }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim }}
+        {{- end }}
+        {{- if .Values.gcs.credentialsSecret }}
+        - name: gcs-credentials
+          secret:
+            secretName: {{ .Values.gcs.credentialsSecret }}
+            defaultMode: 0440
+            items:
+              - key: {{ .Values.gcs.credentialsKey }}
+                path: credentials.json
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  {{- if not .Values.persistence.existingClaim }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          {{- toYaml .Values.persistence.accessModes | nindent 10 }}
+        {{- if .Values.persistence.storageClass }}
+        storageClassName: {{ .Values.persistence.storageClass | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size }}
+  {{- end }}

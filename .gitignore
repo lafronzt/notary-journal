@@ -1,0 +1,13 @@
+data/
+*.sqlite3*
+.env
+*.tfstate*
+.terraform/
+*.tfplan
+journal-export*.json
+export*.json
+credentials*.json
+*.tfvars
+bin/
+coverage*
+.DS_Store
