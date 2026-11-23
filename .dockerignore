@@ -10,3 +10,4 @@ coverage*
 *.tfstate*
 *.tfvars
 .env
+e2e

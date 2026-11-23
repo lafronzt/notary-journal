@@ -225,11 +225,12 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for event format, trust boundar
 make test        # go test -race, including in-memory HTTP and Helm checks if Helm is installed
 make check       # go vet and JavaScript syntax
 make helm-check
+make e2e         # Playwright browser tests (needs Node; downloads Chromium)
 ```
 
 Tests include a Python-produced compatibility fixture, concurrent SQLite writers, immutable history, corrections, source attachment recovery, tamper refusal, failed archive uploads, idempotent retries, paginated recovery, real GCS request semantics through an HTTP transport stub, password sessions, CSRF/Host protections and chart configuration safeguards.
 
-A Linux binary is cross-compiled with CGO disabled. No live GCS credentials or bucket were supplied, no cluster was deployed, and Docker was unavailable in the development environment. A local server was smoke-tested over HTTP (login, entry, attachment, verify, status), but browser rendering/UX has not been exercised in an automated browser. Container builds, cluster rollout, ADC/IAM and a real GCS upload/restore should be verified in the target environment before relying on it for journal preservation.
+A Linux binary is cross-compiled with CGO disabled. No live GCS credentials or bucket were supplied, no cluster was deployed, and Docker was unavailable in the development environment. Playwright tests in `e2e/` drive the real UI in headless Chromium (login, entry, XSS-as-text, attachment, correction, integrity check, paper import, phone-width layout). Visual design has not been reviewed beyond that. Container builds, cluster rollout, ADC/IAM and a real GCS upload/restore should be verified in the target environment before relying on it for journal preservation.
 
 ## Contributing and license
 

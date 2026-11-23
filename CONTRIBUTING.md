@@ -10,6 +10,7 @@ Requires Go 1.27+, Node (syntax check only) and optionally Helm.
 make check      # go vet + JavaScript syntax
 make test       # go test -race ./...
 make helm-check # chart lint/template
+make e2e        # browser tests (Playwright, downloads Chromium)
 ```
 
 ## Guidelines
